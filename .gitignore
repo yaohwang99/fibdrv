@@ -29,3 +29,7 @@ dkms.conf
 # test-oriented
 client
 out
+*.png
+*.gp
+stat.txt
+.vscode
