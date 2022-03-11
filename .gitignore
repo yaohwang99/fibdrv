@@ -28,6 +28,7 @@ dkms.conf
 
 # test-oriented
 client
+client_stat
 out
 *.png
 *.gp
