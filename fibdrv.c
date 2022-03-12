@@ -41,6 +41,29 @@ static long long fib_sequence(long long k)
     return f[2];
 }
 
+static long long fib_sequence_fdouble(long long k)
+{
+    if (unlikely(k < 2))
+        return k;
+    long long fk = 0;
+    long long m = 1 << (63 - __builtin_clz(k));
+
+    while (m) {
+        long long fk1 = 1, f2k = 0, f2k1;
+        f2k = fk * (2 * fk1 - fk);
+        f2k1 = fk * fk + fk1 * fk1;
+        if (k & m) {
+            fk = f2k1;
+            fk1 = f2k + f2k1;
+        } else {
+            fk = f2k;
+            fk1 = f2k1;
+        }
+        m >>= 1;
+    }
+    return fk;
+}
+
 static int fib_open(struct inode *inode, struct file *file)
 {
     if (!mutex_trylock(&fib_mutex)) {
@@ -62,7 +85,10 @@ static ssize_t fib_read(struct file *file,
                         size_t size,
                         loff_t *offset)
 {
-    return (ssize_t) fib_sequence(*offset);
+    if (likely(size))
+        return (ssize_t) fib_sequence_fdouble(*offset);
+    else
+        return (ssize_t) fib_sequence(*offset);
 }
 
 /* write operation is skipped */
@@ -72,7 +98,7 @@ static ssize_t fib_write(struct file *file,
                          loff_t *offset)
 {
     ktime_t kt = ktime_get();
-    fib_sequence(*offset);
+    fib_sequence_fdouble(*offset);
     kt = ktime_sub(ktime_get(), kt);
     if (unlikely(size == 1))
         return 1;
