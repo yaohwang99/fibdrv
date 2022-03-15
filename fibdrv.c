@@ -6,6 +6,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include "big_num.h"
 
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_AUTHOR("National Cheng Kung University, Taiwan");
@@ -17,12 +18,31 @@ MODULE_VERSION("0.1");
 /* MAX_LENGTH is set to 92 because
  * ssize_t can't fit the number > 92
  */
-#define MAX_LENGTH 92
+#define MAX_LENGTH 100
 
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
+
+char *fib_sequence_big_num(long long k)
+{
+    big_num_t *a = big_num_create(1, 0);
+    if (unlikely(!k))
+        return big_num_to_string(a);
+    big_num_t *b = big_num_create(1, 1);
+    big_num_t *c = big_num_create(1, 1);
+    for (int i = 2; i <= k; ++i) {
+        big_num_free(c);
+        c = big_num_add(a, b);
+        big_num_free(a);
+        a = b;
+        b = big_num_dup(c);
+    }
+    big_num_free(a);
+    big_num_free(b);
+    return big_num_to_string(c);
+}
 
 static long long fib_sequence(long long k)
 {
@@ -85,10 +105,26 @@ static ssize_t fib_read(struct file *file,
                         size_t size,
                         loff_t *offset)
 {
-    if (likely(size))
+    char *p;
+    char *r;
+    size_t len = 0;
+    ssize_t sz;
+    switch (size) {
+    case 1:
         return (ssize_t) fib_sequence_fdouble(*offset);
-    else
+    case 2:
+        p = fib_sequence_big_num(*offset);
+        r = p;
+        for (; *r == '0' && *(r + 1); ++r)
+            ;
+        len = strlen(r) + 1;
+        sz = copy_to_user(buf, r, len);
+        kvfree(p);
+        return sz;
+
+    default:
         return (ssize_t) fib_sequence(*offset);
+    }
 }
 
 /* write operation is skipped */
@@ -97,12 +133,23 @@ static ssize_t fib_write(struct file *file,
                          size_t size,
                          loff_t *offset)
 {
-    ktime_t kt = ktime_get();
-    fib_sequence_fdouble(*offset);
-    kt = ktime_sub(ktime_get(), kt);
-    if (unlikely(size == 1))
+    ktime_t kt;
+    char *p;
+    switch (size) {
+    case 1:
         return 1;
-    return (ssize_t) ktime_to_ns(kt);
+    case 2:
+        kt = ktime_get();
+        p = fib_sequence_big_num(*offset);
+        kt = ktime_sub(ktime_get(), kt);
+        kvfree(p);
+        return (ssize_t) ktime_to_ns(kt);
+    default:
+        kt = ktime_get();
+        fib_sequence_fdouble(*offset);
+        kt = ktime_sub(ktime_get(), kt);
+        return (ssize_t) ktime_to_ns(kt);
+    }
 }
 
 static loff_t fib_device_lseek(struct file *file, loff_t offset, int orig)
@@ -142,7 +189,6 @@ static int __init init_fib_dev(void)
     int rc = 0;
 
     mutex_init(&fib_mutex);
-
     // Let's register the device
     // This will dynamically allocate the major number
     rc = alloc_chrdev_region(&fib_dev, 0, 1, DEV_FIBONACCI_NAME);
