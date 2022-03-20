@@ -3,9 +3,8 @@
 #analyzing the performance of fibdrv.
 #
 
-sudo insmod fibdrv.ko
-#sudo taskset -c 7 ./client_stat
+sudo insmod fibdrv_module.ko
 sudo ./client_stat
-sudo rmmod fibdrv
-gnuplot plot.gp
-
+sudo rmmod fibdrv_module
+gnuplot plot_med.gp
+gnuplot plot_med_k2u.gp
