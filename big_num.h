@@ -13,23 +13,31 @@ typedef struct {
 
 big_num_t *big_num_create(size_t, u32);
 
-big_num_t *big_num_add(big_num_t *, big_num_t *);
+void big_num_add(big_num_t *, big_num_t *, big_num_t *);
 
-big_num_t *big_num_sub(big_num_t *, big_num_t *);
+void big_num_sub(big_num_t *, big_num_t *, big_num_t *);
 
 big_num_t *big_num_2comp(big_num_t *);
 
 void big_num_lshift(big_num_t *, int);
 
-big_num_t *big_num_mul(big_num_t *, big_num_t *);
+void big_num_mul(big_num_t *, big_num_t *, big_num_t *);
 
-big_num_t *big_num_square(big_num_t *);
+void big_num_mul_add(big_num_t *, big_num_t *);
+
+void big_num_square(big_num_t *, big_num_t *);
 
 big_num_t *big_num_dup(big_num_t *);
+
+void big_num_cpy(big_num_t *, big_num_t *);
 
 char *big_num_to_string(big_num_t *);
 
 void big_num_free(big_num_t *);
 
 bool big_num_is_zero(big_num_t *);
+
+void big_num_reset(big_num_t *);
+
+void big_num_resize(big_num_t *, int);
 #endif /* BIG_NUM_H_*/
