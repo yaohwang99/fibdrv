@@ -36,3 +36,5 @@ stat.txt
 stat_med.txt
 .vscode
 *.sh
+perf*
+scripts/stat_med*
