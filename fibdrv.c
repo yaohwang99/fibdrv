@@ -18,7 +18,7 @@ MODULE_VERSION("0.1");
 /* MAX_LENGTH is set to 92 because
  * ssize_t can't fit the number > 92
  */
-#define MAX_LENGTH 100
+#define MAX_LENGTH 1000
 
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
@@ -59,6 +59,54 @@ static long long fib_sequence(long long k)
     }
 
     return f[2];
+}
+
+char *fib_sequence_big_num_fdouble(long long k)
+{
+    big_num_t *fk = big_num_create(1, 0);
+    if (unlikely(!k))
+        return big_num_to_string(fk);
+    big_num_t *fk1 = big_num_create(1, 1);
+    big_num_t *f2k = big_num_create(1, 0);
+    big_num_t *f2k1 = NULL;
+    // test
+    // big_num_free(fk);
+    // fk = big_num_sub(fk1, f2k);
+
+    // test
+    long long m = 1 << (63 - __builtin_clz(k));
+    while (m) {
+        // f2k = fk * (2 * fk1 - fk);
+        big_num_t *t1 = big_num_dup(fk1);
+        big_num_t *t2 = big_num_add(fk1, t1);
+        big_num_t *t3 = big_num_sub(t2, fk);
+        big_num_free(f2k);
+        f2k = big_num_mul(fk, t3);
+        // f2k1 = fk * fk + fk1 * fk1;
+        big_num_t *t4 = big_num_square(fk);
+        big_num_t *t5 = big_num_square(fk1);
+        big_num_free(f2k1);
+        f2k1 = big_num_add(t4, t5);
+        big_num_free(fk);
+        big_num_free(fk1);
+        if (k & m) {
+            fk = big_num_dup(f2k1);
+            fk1 = big_num_add(f2k, f2k1);
+        } else {
+            fk = big_num_dup(f2k);
+            fk1 = big_num_dup(f2k1);
+        }
+        m >>= 1;
+        big_num_free(t1);
+        big_num_free(t2);
+        big_num_free(t3);
+        big_num_free(t4);
+        big_num_free(t5);
+    }
+    big_num_free(fk1);
+    big_num_free(f2k);
+    big_num_free(f2k1);
+    return big_num_to_string(fk);
 }
 
 static long long fib_sequence_fdouble(long long k)
@@ -121,7 +169,15 @@ static ssize_t fib_read(struct file *file,
         sz = copy_to_user(buf, r, len);
         kvfree(p);
         return sz;
-
+    case 3:
+        p = fib_sequence_big_num_fdouble(*offset);
+        r = p;
+        for (; *r == '0' && *(r + 1); ++r)
+            ;
+        len = strlen(r) + 1;
+        sz = copy_to_user(buf, r, len);
+        kvfree(p);
+        return sz;
     default:
         return (ssize_t) fib_sequence(*offset);
     }
@@ -141,6 +197,12 @@ static ssize_t fib_write(struct file *file,
     case 2:
         kt = ktime_get();
         p = fib_sequence_big_num(*offset);
+        kt = ktime_sub(ktime_get(), kt);
+        kvfree(p);
+        return (ssize_t) ktime_to_ns(kt);
+    case 3:
+        kt = ktime_get();
+        p = fib_sequence_big_num_fdouble(*offset);
         kt = ktime_sub(ktime_get(), kt);
         kvfree(p);
         return (ssize_t) ktime_to_ns(kt);
