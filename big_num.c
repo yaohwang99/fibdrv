@@ -93,13 +93,16 @@ void big_num_mul(big_num_t *c, big_num_t *a, big_num_t *b)
     if (!c)
         return;
     big_num_t *b2 = big_num_dup(b);
+    int cnt = 0;
     for (size_t i = 0; i < a->block_num; ++i) {
         for (int k = 0; k < 32; ++k) {
             u32 m = 1u << k;
             if (a->block[i] & m) {
+                big_num_lshift(b2, cnt);
                 big_num_mul_add(c, b2);
+                cnt = 0;
             }
-            big_num_lshift(b2, 1);
+            ++cnt;
         }
     }
     big_num_free(b2);
