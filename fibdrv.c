@@ -32,16 +32,17 @@ char *fib_sequence_big_num(long long k)
         return big_num_to_string(a);
     big_num_t *b = big_num_create(1, 1);
     big_num_t *c = big_num_create(1, 1);
+
     for (int i = 2; i <= k; ++i) {
-        big_num_free(c);
-        c = big_num_add(a, b);
-        big_num_free(a);
+        big_num_add(c, a, b);
+        big_num_t *t = a;
         a = b;
-        b = big_num_dup(c);
+        b = c;
+        c = t;
     }
     big_num_free(a);
-    big_num_free(b);
-    return big_num_to_string(c);
+    big_num_free(c);
+    return big_num_to_string(b);
 }
 
 static long long fib_sequence(long long k)
@@ -68,44 +69,37 @@ char *fib_sequence_big_num_fdouble(long long k)
         return big_num_to_string(fk);
     big_num_t *fk1 = big_num_create(1, 1);
     big_num_t *f2k = big_num_create(1, 0);
-    big_num_t *f2k1 = NULL;
-    // test
-    // big_num_free(fk);
-    // fk = big_num_sub(fk1, f2k);
+    big_num_t *f2k1 = big_num_create(1, 0);
 
-    // test
+    big_num_t *t1 = big_num_create(1, 0);
+    big_num_t *t2 = big_num_create(1, 0);
+
     long long m = 1 << (63 - __builtin_clz(k));
     while (m) {
         // f2k = fk * (2 * fk1 - fk);
-        big_num_t *t1 = big_num_dup(fk1);
-        big_num_t *t2 = big_num_add(fk1, t1);
-        big_num_t *t3 = big_num_sub(t2, fk);
-        big_num_free(f2k);
-        f2k = big_num_mul(fk, t3);
+        big_num_cpy(t1, fk1);
+        big_num_add(t2, fk1, t1);
+        big_num_sub(t1, t2, fk);
+        big_num_mul(f2k, fk, t1);
         // f2k1 = fk * fk + fk1 * fk1;
-        big_num_t *t4 = big_num_square(fk);
-        big_num_t *t5 = big_num_square(fk1);
-        big_num_free(f2k1);
-        f2k1 = big_num_add(t4, t5);
-        big_num_free(fk);
-        big_num_free(fk1);
+        big_num_square(t1, fk);
+        big_num_square(t2, fk1);
+        big_num_add(f2k1, t1, t2);
         if (k & m) {
-            fk = big_num_dup(f2k1);
-            fk1 = big_num_add(f2k, f2k1);
+            big_num_cpy(fk, f2k1);
+            big_num_add(fk1, f2k, f2k1);
         } else {
-            fk = big_num_dup(f2k);
-            fk1 = big_num_dup(f2k1);
+            big_num_cpy(fk, f2k);
+            big_num_cpy(fk1, f2k1);
         }
         m >>= 1;
-        big_num_free(t1);
-        big_num_free(t2);
-        big_num_free(t3);
-        big_num_free(t4);
-        big_num_free(t5);
+
     }
     big_num_free(fk1);
     big_num_free(f2k);
     big_num_free(f2k1);
+    big_num_free(t1);
+    big_num_free(t2);
     return big_num_to_string(fk);
 }
 

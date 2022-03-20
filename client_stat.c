@@ -10,6 +10,7 @@
 #define FIB_DEV "/dev/fibonacci"
 #define SAMPLE_TIME 21
 #define OFFSET 1000
+#define METHOD 3
 int cmpfunc(const void *a, const void *b)
 {
     return (*(int *) a - *(int *) b);
@@ -30,7 +31,7 @@ int main()
     int **sample_kernel = malloc((OFFSET + 1) * sizeof(int *));
     int **sample_user = malloc((OFFSET + 1) * sizeof(int *));
     int **k2u = malloc((OFFSET + 1) * sizeof(int *));
-    FILE *fpm = fopen("scripts/stat_med.txt", "w");
+    FILE *fpm = fopen("scripts/stat_med_fdouble_v1.txt", "w");
     struct timespec t1, t2;
     int fd = open(FIB_DEV, O_RDWR);
     if (fd < 0) {
@@ -47,9 +48,8 @@ int main()
             int used = 0;
             lseek(fd, i, SEEK_SET);
             long long sz2;
-            // sz = read(fd, big_num_buf, 2);
             clock_gettime(CLOCK_MONOTONIC, &t1);
-            sz2 = write(fd, write_buf, 3);
+            sz2 = write(fd, write_buf, METHOD);
             clock_gettime(CLOCK_MONOTONIC, &t2);
             sample_kernel[i][j] = (int) sz2;
             sample_user[i][j] = (int) (t2.tv_nsec - t1.tv_nsec);
@@ -59,7 +59,7 @@ int main()
     }
     for (int i = 0; i <= OFFSET; i++) {
         lseek(fd, i, SEEK_SET);
-        long long sz3 = read(fd, big_num_buf, 3);
+        long long sz3 = read(fd, big_num_buf, METHOD);
         printf("f_big_num(%d): %s\n", i, big_num_buf);
         printf("f_big_num(%d): %ld\n", i, strnlen(big_num_buf, 1000));
         if (sz3)
