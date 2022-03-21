@@ -25,11 +25,11 @@ static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
 
-char *fib_sequence_big_num(long long k)
+big_num_t *fib_sequence_big_num(long long k)
 {
     big_num_t *a = big_num_create(1, 0);
     if (unlikely(!k))
-        return big_num_to_string(a);
+        return a;
     big_num_t *b = big_num_create(1, 1);
     big_num_t *c = big_num_create(1, 1);
 
@@ -42,7 +42,7 @@ char *fib_sequence_big_num(long long k)
     }
     big_num_free(a);
     big_num_free(c);
-    return big_num_to_string(b);
+    return b;
 }
 
 static long long fib_sequence(long long k)
@@ -62,11 +62,11 @@ static long long fib_sequence(long long k)
     return f[2];
 }
 
-char *fib_sequence_big_num_fdouble(long long k)
+big_num_t *fib_sequence_big_num_fdouble(long long k)
 {
     big_num_t *fk = big_num_create(1, 0);
     if (unlikely(!k))
-        return big_num_to_string(fk);
+        return fk;
     big_num_t *fk1 = big_num_create(1, 1);
     big_num_t *f2k = big_num_create(1, 0);
     big_num_t *f2k1 = big_num_create(1, 0);
@@ -100,7 +100,7 @@ char *fib_sequence_big_num_fdouble(long long k)
     big_num_free(f2k1);
     big_num_free(t1);
     big_num_free(t2);
-    return big_num_to_string(fk);
+    return fk;
 }
 
 static long long fib_sequence_fdouble(long long k)
@@ -147,6 +147,7 @@ static ssize_t fib_read(struct file *file,
                         size_t size,
                         loff_t *offset)
 {
+    big_num_t *a = NULL;
     char *p;
     char *r;
     size_t len = 0;
@@ -155,7 +156,8 @@ static ssize_t fib_read(struct file *file,
     case 1:
         return (ssize_t) fib_sequence_fdouble(*offset);
     case 2:
-        p = fib_sequence_big_num(*offset);
+        a = fib_sequence_big_num(*offset);
+        p = big_num_to_string(a);
         r = p;
         for (; *r == '0' && *(r + 1); ++r)
             ;
@@ -164,7 +166,8 @@ static ssize_t fib_read(struct file *file,
         kvfree(p);
         return sz;
     case 3:
-        p = fib_sequence_big_num_fdouble(*offset);
+        a = fib_sequence_big_num_fdouble(*offset);
+        p = big_num_to_string(a);
         r = p;
         for (; *r == '0' && *(r + 1); ++r)
             ;
@@ -184,21 +187,21 @@ static ssize_t fib_write(struct file *file,
                          loff_t *offset)
 {
     ktime_t kt;
-    char *p;
+    big_num_t *a = NULL;
     switch (size) {
     case 1:
         return 1;
     case 2:
         kt = ktime_get();
-        p = fib_sequence_big_num(*offset);
+        a = fib_sequence_big_num(*offset);
         kt = ktime_sub(ktime_get(), kt);
-        kvfree(p);
+        big_num_free(a);
         return (ssize_t) ktime_to_ns(kt);
     case 3:
         kt = ktime_get();
-        p = fib_sequence_big_num_fdouble(*offset);
+        a = fib_sequence_big_num_fdouble(*offset);
         kt = ktime_sub(ktime_get(), kt);
-        kvfree(p);
+        big_num_free(a);
         return (ssize_t) ktime_to_ns(kt);
     default:
         kt = ktime_get();
