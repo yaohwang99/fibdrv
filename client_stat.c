@@ -31,7 +31,7 @@ int main()
     int **sample_kernel = malloc((OFFSET + 1) * sizeof(int *));
     int **sample_user = malloc((OFFSET + 1) * sizeof(int *));
     int **k2u = malloc((OFFSET + 1) * sizeof(int *));
-    FILE *fpm = fopen("scripts/stat_med_fdouble_v1.txt", "w");
+    FILE *fpm = fopen("scripts/stat_med_fdouble_v4.txt", "w");
     struct timespec t1, t2;
     int fd = open(FIB_DEV, O_RDWR);
     if (fd < 0) {
