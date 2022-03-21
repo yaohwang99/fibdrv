@@ -32,9 +32,7 @@ client_stat
 out
 *.png
 *.gp
-stat.txt
-stat_med.txt
 .vscode
 *.sh
 perf*
-scripts/stat_med*
+scripts/stat*.txt
