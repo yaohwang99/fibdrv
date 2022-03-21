@@ -55,32 +55,6 @@ big_num_t *big_num_2comp(big_num_t *a)
     return c;
 }
 
-void big_num_lshift(big_num_t *a, int shift)
-{
-    if (big_num_is_zero(a))
-        return;
-    int cnt = 0, k = shift;
-    for (; k > 32; k -= 32)
-        cnt++;
-    for (; cnt > 0; --cnt) {
-        big_num_resize(a, a->block_num + 1);
-        for (int i = a->block_num - 1; i > 0; --i) {
-            a->block[i] = a->block[i - 1];
-        }
-        a->block[0] = 0;
-    }
-    u32 prev = 0;
-    for (size_t i = 0; i < a->block_num; ++i) {
-        u64 tmp = ((u64) a->block[i]) << k;
-        u32 curr = (u32) tmp;
-        a->block[i] = curr | prev;
-        prev = (u32)(tmp >> 32);
-    }
-    if (prev) {
-        big_num_resize(a, a->block_num + 1);
-        a->block[a->block_num - 1] = prev;
-    }
-}
 
 void big_num_mul(big_num_t *c, big_num_t *a, big_num_t *b)
 {
@@ -92,46 +66,23 @@ void big_num_mul(big_num_t *c, big_num_t *a, big_num_t *b)
     }
     if (!c)
         return;
-    big_num_t *b2 = big_num_dup(b);
-    int cnt = 0;
-    for (size_t i = 0; i < a->block_num; ++i) {
-        for (int k = 0; k < 32; ++k) {
-            u32 m = 1u << k;
-            if (a->block[i] & m) {
-                big_num_lshift(b2, cnt);
-                big_num_mul_add(c, b2);
-                cnt = 0;
-            }
-            ++cnt;
+    for (size_t shift = 0; shift < b->block_num; ++shift) {
+        u32 cy = 0;
+        size_t i = 0;
+        for (; i < a->block_num; i++) {
+            u64 t1 = (u64) a->block[i] * (u64) b->block[shift] + cy;
+            cy = (u32)(t1 >> 32);
+            if (i + 1 + shift > c->block_num)
+                big_num_resize(c, i + 1 + shift);
+            u64 t2 = ((u64) c->block[i + shift]) + (u32) t1;
+            cy += (u32)(t2 >> 32);
+            c->block[i + shift] += (u32) t1;
         }
-    }
-    big_num_free(b2);
-}
-
-void big_num_mul_add(big_num_t *c, big_num_t *a)
-{
-    if (!a)
-        return;
-    if (big_num_is_zero(a)) {
-        return;
-    }
-    if (a->block_num > c->block_num)
-        big_num_resize(c, a->block_num);
-
-    u32 cy = 0;
-    for (size_t i = 0; i < a->block_num; ++i) {
-        u32 tmp = c->block[i];
-        c->block[i] = a->block[i] + tmp + cy;
-        cy = (u32)(((u64) a->block[i] + (u64) tmp) >> 32);
-    }
-    for (size_t i = a->block_num; i < c->block_num; ++i) {
-        u32 tmp = c->block[i];
-        c->block[i] = tmp + cy;
-        cy = (u32)(((u64) tmp + cy) >> 32);
-    }
-    if (cy) {
-        big_num_resize(c, c->block_num + 1);
-        c->block[c->block_num - 1] = cy;
+        if (cy) {
+            if (i + 1 + shift > c->block_num)
+                big_num_resize(c, i + 1 + shift);
+            c->block[i + shift] += cy;
+        }
     }
 }
 

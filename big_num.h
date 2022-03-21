@@ -23,8 +23,6 @@ void big_num_lshift(big_num_t *, int);
 
 void big_num_mul(big_num_t *, big_num_t *, big_num_t *);
 
-void big_num_mul_add(big_num_t *, big_num_t *);
-
 void big_num_square(big_num_t *, big_num_t *);
 
 big_num_t *big_num_dup(big_num_t *);
