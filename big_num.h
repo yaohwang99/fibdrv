@@ -17,15 +17,9 @@ void big_num_add(big_num_t *, big_num_t *, big_num_t *);
 
 void big_num_sub(big_num_t *, big_num_t *, big_num_t *);
 
-big_num_t *big_num_2comp(big_num_t *);
-
-void big_num_lshift(big_num_t *, int);
-
 void big_num_mul(big_num_t *, big_num_t *, big_num_t *);
 
 void big_num_square(big_num_t *, big_num_t *);
-
-big_num_t *big_num_dup(big_num_t *);
 
 void big_num_cpy(big_num_t *, big_num_t *);
 
@@ -38,4 +32,6 @@ bool big_num_is_zero(big_num_t *);
 void big_num_reset(big_num_t *);
 
 void big_num_resize(big_num_t *, int);
+
+void big_num_trim(big_num_t *);
 #endif /* BIG_NUM_H_*/
