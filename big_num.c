@@ -21,6 +21,7 @@ void big_num_add(big_num_t *c, big_num_t *a, big_num_t *b)
         big_num_resize(c, big->block_num + 1);
         c->block[c->block_num - 1] = cy;
     }
+    big_num_trim(c);
 }
 
 // c = a - b, assume a > b
@@ -36,6 +37,7 @@ void big_num_sub(big_num_t *c, big_num_t *a, big_num_t *b)
         c->block[i] = a->block[i] + t + cy;
         cy = (u32)(((u64) a->block[i] + (u64) t) >> 32);
     }
+    big_num_trim(c);
 }
 void big_num_lshift(big_num_t *a, int k)
 {
@@ -146,7 +148,8 @@ big_num_t *big_num_create(size_t num, u32 init)
         kvfree(a);
         return NULL;
     }
-    a->block_num = num;
+    a->true_block_num = num;
+    a->block_num = 1;
     memset(a->block, 0, sizeof(u32) * num);
     a->block[0] = init;
     return a;
@@ -227,16 +230,16 @@ void big_num_reset(big_num_t *a)
 }
 void big_num_resize(big_num_t *a, int num)
 {
-    if (a->block_num == num)
-        return;
-    a->block = kvrealloc(a->block, sizeof(u32) * a->block_num,
-                         sizeof(u32) * num, GFP_KERNEL);
-    if (a->block_num > num) {
+    // decrease size
+    if (a->true_block_num >= num) {
         a->block_num = num;
-    } else {
-        while (a->block_num < num)
-            a->block_num++;
-        a->block[a->block_num - 1] = 0;
+    } else {  // num > true block num >= block num
+        a->block = kvrealloc(a->block, sizeof(u32) * a->true_block_num,
+                             sizeof(u32) * num, GFP_KERNEL);
+
+        memset(&a->block[a->true_block_num], 0,
+               sizeof(u32) * (num - a->true_block_num));
+        a->true_block_num = a->block_num = num;
     }
 }
 bool big_num_is_zero(big_num_t *a)

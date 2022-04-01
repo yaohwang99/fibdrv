@@ -9,6 +9,7 @@ extern void *kvrealloc(void *p, size_t oldsize, size_t newsize, gfp_t flags);
 typedef struct {
     u32 *block;
     size_t block_num;
+    size_t true_block_num;
 } big_num_t;
 
 big_num_t *big_num_create(size_t, u32);
