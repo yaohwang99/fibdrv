@@ -64,15 +64,16 @@ static long long fib_sequence(long long k)
 
 big_num_t *fib_sequence_big_num_fdouble(long long k)
 {
-    big_num_t *fk = big_num_create(1, 0);
+    size_t block_num = k / 46 + 1;
+    big_num_t *fk = big_num_create(block_num, 0);
     if (unlikely(!k))
         return fk;
-    big_num_t *fk1 = big_num_create(1, 1);
-    big_num_t *f2k = big_num_create(1, 0);
-    big_num_t *f2k1 = big_num_create(1, 0);
+    big_num_t *fk1 = big_num_create(block_num, 1);
+    big_num_t *f2k = big_num_create(block_num, 0);
+    big_num_t *f2k1 = big_num_create(block_num, 0);
 
-    big_num_t *t1 = big_num_create(1, 0);
-    big_num_t *t2 = big_num_create(1, 0);
+    big_num_t *t1 = big_num_create(block_num, 0);
+    big_num_t *t2 = big_num_create(block_num, 0);
 
     long long m = 1 << (63 - __builtin_clz(k));
     while (m) {
@@ -93,7 +94,6 @@ big_num_t *fib_sequence_big_num_fdouble(long long k)
             big_num_cpy(fk1, f2k1);
         }
         m >>= 1;
-
     }
     big_num_free(fk1);
     big_num_free(f2k);
