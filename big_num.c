@@ -1,4 +1,11 @@
 #include "big_num.h"
+u32 base_add(u32 *c, u32 a, u32 b, u32 cy)
+{
+    u64 t = (u64) a + (u64) b + (u64) cy;
+    *c = (u32) t;
+    cy = (u32)(t >> 32);
+    return cy;
+}
 // c = a + b
 void big_num_add(big_num_t *c, big_num_t *a, big_num_t *b)
 {
@@ -10,12 +17,10 @@ void big_num_add(big_num_t *c, big_num_t *a, big_num_t *b)
     big_num_resize(c, big->block_num);
     u32 cy = 0;
     for (size_t i = 0; i < small->block_num; ++i) {
-        c->block[i] = a->block[i] + b->block[i] + cy;
-        cy = (u32)(((u64) a->block[i] + (u64) b->block[i]) >> 32);
+        cy = base_add(&c->block[i], a->block[i], b->block[i], cy);
     }
     for (size_t i = small->block_num; i < big->block_num; ++i) {
-        c->block[i] = big->block[i] + cy;
-        cy = (u32)(((u64) big->block[i] + cy) >> 32);
+        cy = base_add(&c->block[i], big->block[i], 0, cy);
     }
     if (cy) {
         big_num_resize(c, big->block_num + 1);
@@ -33,9 +38,7 @@ void big_num_sub(big_num_t *c, big_num_t *a, big_num_t *b)
     big_num_resize(c, a->block_num);
     u32 cy = 1;
     for (size_t i = 0; i < a->block_num; ++i) {
-        u32 t = ~b->block[i];
-        c->block[i] = a->block[i] + t + cy;
-        cy = (u32)(((u64) a->block[i] + (u64) t) >> 32);
+        cy = base_add(&c->block[i], a->block[i], ~b->block[i], cy);
     }
     big_num_trim(c);
 }
@@ -52,7 +55,13 @@ void big_num_lshift(big_num_t *a, int k)
         a->block[a->block_num - 1] = cy;
     }
 }
-
+u32 base_mul(u32 *c, u32 a, u32 b, u32 cy)
+{
+    u64 t = (u64) a * (u64) b + (u64) cy;
+    *c = (u32) t;
+    cy = (u32)(t >> 32);
+    return cy;
+}
 void big_num_mul(big_num_t *c, big_num_t *a, big_num_t *b)
 {
     if (!a || !b)
@@ -69,16 +78,13 @@ void big_num_mul(big_num_t *c, big_num_t *a, big_num_t *b)
         u32 cy = 0;
         size_t i = 0;
         for (; i < a->block_num; ++i) {
-            u64 t1 = (u64) a->block[i] * (u64) b->block[shift] + cy;
-            cy = (u32)(t1 >> 32);
-            u64 t2 = ((u64) c->block[i + shift]) + (u32) t1;
-            cy += (u32)(t2 >> 32);
-            c->block[i + shift] = (u32) t2;
+            u32 t;
+            cy = base_mul(&t, a->block[i], b->block[shift], cy);
+            cy += base_add(&c->block[i + shift], c->block[i + shift], t, 0);
         }
         for (int j = 0; cy != 0; ++j) {
-            u64 t = (u64) c->block[i + j + shift] + (u64) cy;
-            c->block[i + j + shift] = (u32) t;
-            cy = (u32)(t >> 32);
+            cy = base_add(&c->block[i + j + shift], c->block[i + j + shift], 0,
+                          cy);
         }
     }
     big_num_trim(c);
@@ -101,30 +107,24 @@ void big_num_square(big_num_t *c, big_num_t *a)
         u32 cy = 0;
         size_t i = shift + 1;
         for (; i < a->block_num; ++i) {
-            u64 t1 = (u64) a->block[i] * (u64) a->block[shift] + cy;
-            cy = (u32)(t1 >> 32);
-            u64 t2 = ((u64) c->block[i + shift]) + (u32) t1;
-            cy += (u32)(t2 >> 32);
-            c->block[i + shift] = (u32) t2;
+            u32 t;
+            cy = base_mul(&t, a->block[i], a->block[shift], cy);
+            cy += base_add(&c->block[i + shift], c->block[i + shift], t, 0);
         }
         for (int j = 0; cy != 0; ++j) {
-            u64 t = (u64) c->block[i + j + shift] + (u64) cy;
-            c->block[i + j + shift] = (u32) t;
-            cy = (u32)(t >> 32);
+            cy = base_add(&c->block[i + j + shift], c->block[i + j + shift], 0,
+                          cy);
         }
     }
     big_num_lshift(c, 1);
     u32 cy = 0;
     for (size_t shift = 0; shift < a->block_num; ++shift) {
-        u64 t1 = (u64) a->block[shift] * (u64) a->block[shift] + cy;
-        cy = (u32)(t1 >> 32);
-        u64 t2 = ((u64) c->block[2 * shift]) + (u32) t1;
-        cy += (u32)(t2 >> 32);
-        c->block[2 * shift] = (u32) t2;
+        u32 t;
+        cy = base_mul(&t, a->block[shift], a->block[shift], cy);
+        cy += base_add(&c->block[2 * shift], c->block[2 * shift], t, 0);
         for (int j = 1; cy != 0; ++j) {
-            u64 t = (u64) c->block[j + 2 * shift] + (u64) cy;
-            c->block[j + 2 * shift] = (u32) t;
-            cy = (u32)(t >> 32);
+            cy = base_add(&c->block[j + 2 * shift], c->block[j + 2 * shift], 0,
+                          cy);
         }
     }
     big_num_trim(c);
