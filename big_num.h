@@ -4,15 +4,18 @@
 #include <linux/slab.h>
 #include <linux/types.h>    // kfree kvmalloc
 #include <linux/vmalloc.h>  // vfree
+#define BASE_BITS 64
+typedef unsigned __int128 dbase_t;
+typedef u64 base_t;
 extern void kvfree(const void *addr);
 extern void *kvrealloc(void *p, size_t oldsize, size_t newsize, gfp_t flags);
 typedef struct {
-    u32 *block;
+    base_t *block;
     size_t block_num;
     size_t true_block_num;
 } big_num_t;
 
-big_num_t *big_num_create(size_t, u32);
+big_num_t *big_num_create(size_t, base_t);
 
 void big_num_add(big_num_t *, big_num_t *, big_num_t *);
 

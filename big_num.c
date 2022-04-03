@@ -1,9 +1,9 @@
 #include "big_num.h"
-u32 base_add(u32 *c, u32 a, u32 b, u32 cy)
+base_t base_add(base_t *c, base_t a, base_t b, base_t cy)
 {
-    u64 t = (u64) a + (u64) b + (u64) cy;
-    *c = (u32) t;
-    cy = (u32)(t >> 32);
+    dbase_t t = (dbase_t) a + (dbase_t) b + (dbase_t) cy;
+    *c = (base_t) t;
+    cy = (base_t)(t >> BASE_BITS);
     return cy;
 }
 // c = a + b
@@ -15,7 +15,7 @@ void big_num_add(big_num_t *c, big_num_t *a, big_num_t *b)
     big = a->block_num >= b->block_num ? a : b;
     small = a->block_num < b->block_num ? a : b;
     big_num_resize(c, big->block_num);
-    u32 cy = 0;
+    base_t cy = 0;
     for (size_t i = 0; i < small->block_num; ++i) {
         cy = base_add(&c->block[i], a->block[i], b->block[i], cy);
     }
@@ -36,7 +36,7 @@ void big_num_sub(big_num_t *c, big_num_t *a, big_num_t *b)
         return;
     big_num_resize(b, a->block_num);
     big_num_resize(c, a->block_num);
-    u32 cy = 1;
+    base_t cy = 1;
     for (size_t i = 0; i < a->block_num; ++i) {
         cy = base_add(&c->block[i], a->block[i], ~b->block[i], cy);
     }
@@ -44,22 +44,22 @@ void big_num_sub(big_num_t *c, big_num_t *a, big_num_t *b)
 }
 void big_num_lshift(big_num_t *a, int k)
 {
-    u32 cy = 0;
+    base_t cy = 0;
     for (size_t i = 0; i < a->block_num; ++i) {
-        u64 t = ((u64) a->block[i] << k) + cy;
-        cy = (u32)(t >> 32);
-        a->block[i] = (u32) t;
+        dbase_t t = ((dbase_t) a->block[i] << k) + cy;
+        cy = (base_t)(t >> BASE_BITS);
+        a->block[i] = (base_t) t;
     }
     if (cy) {
         big_num_resize(a, a->block_num + 1);
         a->block[a->block_num - 1] = cy;
     }
 }
-u32 base_mul(u32 *c, u32 a, u32 b, u32 cy)
+base_t base_mul(base_t *c, base_t a, base_t b, base_t cy)
 {
-    u64 t = (u64) a * (u64) b + (u64) cy;
-    *c = (u32) t;
-    cy = (u32)(t >> 32);
+    dbase_t t = (dbase_t) a * (dbase_t) b + (dbase_t) cy;
+    *c = (base_t) t;
+    cy = (base_t)(t >> BASE_BITS);
     return cy;
 }
 void big_num_mul(big_num_t *c, big_num_t *a, big_num_t *b)
@@ -75,10 +75,10 @@ void big_num_mul(big_num_t *c, big_num_t *a, big_num_t *b)
     if (!c)
         return;
     for (size_t shift = 0; shift < b->block_num; ++shift) {
-        u32 cy = 0;
+        base_t cy = 0;
         size_t i = 0;
         for (; i < a->block_num; ++i) {
-            u32 t;
+            base_t t;
             cy = base_mul(&t, a->block[i], b->block[shift], cy);
             cy += base_add(&c->block[i + shift], c->block[i + shift], t, 0);
         }
@@ -104,10 +104,10 @@ void big_num_square(big_num_t *c, big_num_t *a)
     if (!c)
         return;
     for (size_t shift = 0; shift < a->block_num; ++shift) {
-        u32 cy = 0;
+        base_t cy = 0;
         size_t i = shift + 1;
         for (; i < a->block_num; ++i) {
-            u32 t;
+            base_t t;
             cy = base_mul(&t, a->block[i], a->block[shift], cy);
             cy += base_add(&c->block[i + shift], c->block[i + shift], t, 0);
         }
@@ -117,9 +117,9 @@ void big_num_square(big_num_t *c, big_num_t *a)
         }
     }
     big_num_lshift(c, 1);
-    u32 cy = 0;
+    base_t cy = 0;
     for (size_t shift = 0; shift < a->block_num; ++shift) {
-        u32 t;
+        base_t t;
         cy = base_mul(&t, a->block[shift], a->block[shift], cy);
         cy += base_add(&c->block[2 * shift], c->block[2 * shift], t, 0);
         for (int j = 1; cy != 0; ++j) {
@@ -135,28 +135,28 @@ void big_num_cpy(big_num_t *c, big_num_t *a)
     if (!a)
         return;
     big_num_resize(c, a->block_num);
-    memcpy(c->block, a->block, sizeof(u32) * a->block_num);
+    memcpy(c->block, a->block, sizeof(base_t) * a->block_num);
 }
 
-big_num_t *big_num_create(size_t num, u32 init)
+big_num_t *big_num_create(size_t num, base_t init)
 {
     big_num_t *a = kvmalloc(sizeof(big_num_t), GFP_KERNEL);
     if (!a)
         return NULL;
-    a->block = kvmalloc(sizeof(u32) * num, GFP_KERNEL);
+    a->block = kvmalloc(sizeof(base_t) * num, GFP_KERNEL);
     if (!a->block) {
         kvfree(a);
         return NULL;
     }
     a->true_block_num = num;
     a->block_num = 1;
-    memset(a->block, 0, sizeof(u32) * num);
+    memset(a->block, 0, sizeof(base_t) * num);
     a->block[0] = init;
     return a;
 }
 char *big_num_to_string(big_num_t *a)
 {
-    size_t len = (a->block_num * sizeof(u32) * 8) / 3 + 2;
+    size_t len = (a->block_num * sizeof(base_t) * 8) / 3 + 2;
     char *ret = kvmalloc(len * sizeof(char), GFP_KERNEL);
     if (!ret) {
         big_num_free(a);
@@ -169,7 +169,7 @@ char *big_num_to_string(big_num_t *a)
 
     ret[len - 1] = '\0';
     for (int i = a->block_num - 1; i >= 0; --i) {
-        for (u32 m = 0x80000000; m; m >>= 1) {
+        for (base_t m = 1ull << (BASE_BITS - 1); m; m >>= 1) {
             int cy = (a->block[i] & m) != 0;
             for (int j = len - 2; j >= 0; --j) {
                 ret[j] = (ret[j] - '0') * 2 + cy + '0';
@@ -226,7 +226,7 @@ void big_num_reset(big_num_t *a)
 {
     if (!a || !a->block)
         return;
-    memset(a->block, 0, sizeof(u32) * a->block_num);
+    memset(a->block, 0, sizeof(base_t) * a->block_num);
 }
 void big_num_resize(big_num_t *a, int num)
 {
@@ -234,11 +234,11 @@ void big_num_resize(big_num_t *a, int num)
     if (a->true_block_num >= num) {
         a->block_num = num;
     } else {  // num > true block num >= block num
-        a->block = kvrealloc(a->block, sizeof(u32) * a->true_block_num,
-                             sizeof(u32) * num, GFP_KERNEL);
+        a->block = kvrealloc(a->block, sizeof(base_t) * a->true_block_num,
+                             sizeof(base_t) * num, GFP_KERNEL);
 
         memset(&a->block[a->true_block_num], 0,
-               sizeof(u32) * (num - a->true_block_num));
+               sizeof(base_t) * (num - a->true_block_num));
         a->true_block_num = a->block_num = num;
     }
 }
