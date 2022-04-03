@@ -9,7 +9,7 @@
 
 #define FIB_DEV "/dev/fibonacci"
 #define SAMPLE_TIME 21
-#define OFFSET 1000
+#define OFFSET 10000
 #define METHOD 3
 int cmpfunc(const void *a, const void *b)
 {
@@ -25,7 +25,7 @@ int ave(int *a)
 }
 int main()
 {
-    char big_num_buf[1000];
+    char big_num_buf[10000];
     char write_buf[] = "testing writing";
     // int OFFSET = 100; /* TODO: try test something bigger than the limit */
     int **sample_kernel = malloc((OFFSET + 1) * sizeof(int *));
@@ -61,7 +61,7 @@ int main()
         lseek(fd, i, SEEK_SET);
         long long sz3 = read(fd, big_num_buf, METHOD);
         printf("f_big_num(%d): %s\n", i, big_num_buf);
-        printf("f_big_num(%d): %ld\n", i, strnlen(big_num_buf, 1000));
+        printf("f_big_num(%d): %ld\n", i, strnlen(big_num_buf, 10000));
         if (sz3)
             printf("f_big_num(%d) is truncated\n", i);
         qsort(sample_kernel[i], SAMPLE_TIME, sizeof(int), cmpfunc);
