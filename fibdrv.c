@@ -64,42 +64,43 @@ static long long fib_sequence(long long k)
 
 big_num_t *fib_sequence_big_num_fdouble(long long k)
 {
-    size_t block_num = k / 46 + 1;
+    size_t block_num = k / 92 + 1;
     big_num_t *fk = big_num_create(block_num, 0);
     if (unlikely(!k))
         return fk;
     big_num_t *fk1 = big_num_create(block_num, 1);
-    big_num_t *f2k = big_num_create(block_num, 0);
-    big_num_t *f2k1 = big_num_create(block_num, 0);
-
     big_num_t *t1 = big_num_create(block_num, 0);
     big_num_t *t2 = big_num_create(block_num, 0);
-
+    big_num_t *t3 = big_num_create(block_num, 0);
+    big_num_t *t4 = big_num_create(block_num, 0);
     long long m = 1 << (63 - __builtin_clz(k));
     while (m) {
-        // f2k = fk * (2 * fk1 - fk);
-        big_num_cpy(t1, fk1);
-        big_num_add(t2, fk1, t1);
-        big_num_sub(t1, t2, fk);
-        big_num_mul(f2k, fk, t1);
-        // f2k1 = fk * fk + fk1 * fk1;
+        // part 1: f2k1 = fk * fk + fk1 * fk1;
         big_num_square(t1, fk);
         big_num_square(t2, fk1);
-        big_num_add(f2k1, t1, t2);
+
+
+        // f2k = fk * (2 * fk1 - fk);
+        big_num_lshift(fk1, 1);
+        big_num_sub(t3, fk1, fk);
+        big_num_swap(&fk, &t4);
+        big_num_mul(fk, t4, t3);
+
+        // part 2: f2k1 = fk * fk + fk1 * fk1;
+        big_num_add(fk1, t1, t2);
+
         if (k & m) {
-            big_num_cpy(fk, f2k1);
-            big_num_add(fk1, f2k, f2k1);
-        } else {
-            big_num_cpy(fk, f2k);
-            big_num_cpy(fk1, f2k1);
+            // swap fk , fk1
+            big_num_swap(&fk, &fk1);
+            big_num_add(fk1, fk, fk1);
         }
         m >>= 1;
     }
     big_num_free(fk1);
-    big_num_free(f2k);
-    big_num_free(f2k1);
     big_num_free(t1);
     big_num_free(t2);
+    big_num_free(t3);
+    big_num_free(t4);
     return fk;
 }
 
