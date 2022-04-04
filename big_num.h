@@ -40,10 +40,5 @@ void big_num_resize(big_num_t *, int);
 
 void big_num_trim(big_num_t *);
 
-void big_num_swap(big_num_t **a, big_num_t **b)
-{
-    big_num_t *tmp = *a;
-    *a = *b;
-    *b = tmp;
-}
+void big_num_swap(big_num_t **, big_num_t **);
 #endif /* BIG_NUM_H_*/

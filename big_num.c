@@ -1,4 +1,10 @@
 #include "big_num.h"
+void big_num_swap(big_num_t **a, big_num_t **b)
+{
+    big_num_t *tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
 base_t base_add(base_t *c, base_t a, base_t b, base_t cy)
 {
     dbase_t t = (dbase_t) a + (dbase_t) b + (dbase_t) cy;
