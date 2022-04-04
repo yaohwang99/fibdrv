@@ -130,13 +130,6 @@ void big_num_square(big_num_t *c, big_num_t *a)
     big_num_trim(c);
 }
 
-void big_num_cpy(big_num_t *c, big_num_t *a)
-{
-    if (!a)
-        return;
-    big_num_resize(c, a->block_num);
-    memcpy(c->block, a->block, sizeof(base_t) * a->block_num);
-}
 
 big_num_t *big_num_create(size_t num, base_t init)
 {

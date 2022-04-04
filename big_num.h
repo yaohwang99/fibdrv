@@ -5,6 +5,7 @@
 #include <linux/types.h>    // kfree kvmalloc
 #include <linux/vmalloc.h>  // vfree
 #define BASE_BITS 64
+#define SWAP(_a, _b) ()
 typedef unsigned __int128 dbase_t;
 typedef u64 base_t;
 extern void kvfree(const void *addr);
@@ -23,9 +24,9 @@ void big_num_sub(big_num_t *, big_num_t *, big_num_t *);
 
 void big_num_mul(big_num_t *, big_num_t *, big_num_t *);
 
-void big_num_square(big_num_t *, big_num_t *);
+void big_num_lshift(big_num_t *, int);
 
-void big_num_cpy(big_num_t *, big_num_t *);
+void big_num_square(big_num_t *, big_num_t *);
 
 char *big_num_to_string(big_num_t *);
 
@@ -38,4 +39,11 @@ void big_num_reset(big_num_t *);
 void big_num_resize(big_num_t *, int);
 
 void big_num_trim(big_num_t *);
+
+void big_num_swap(big_num_t **a, big_num_t **b)
+{
+    big_num_t *tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
 #endif /* BIG_NUM_H_*/
