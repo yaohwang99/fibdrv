@@ -7,9 +7,8 @@ void big_num_swap(big_num_t **a, big_num_t **b)
 }
 base_t base_add(base_t *c, base_t a, base_t b, base_t cy)
 {
-    dbase_t t = (dbase_t) a + (dbase_t) b + (dbase_t) cy;
-    *c = (base_t) t;
-    cy = (base_t)(t >> BASE_BITS);
+    cy = (a += cy) < cy;
+    cy += (*c = a + b) < a;
     return cy;
 }
 // c = a + b
@@ -17,19 +16,21 @@ void big_num_add(big_num_t *c, big_num_t *a, big_num_t *b)
 {
     if (!a || !b)
         return;
-    big_num_t *big, *small;
-    big = a->block_num >= b->block_num ? a : b;
-    small = a->block_num < b->block_num ? a : b;
-    big_num_resize(c, big->block_num);
+    if (a->block_num < b->block_num) {
+        big_num_t *t = a;
+        a = b;
+        b = t;
+    }
+    big_num_resize(c, a->block_num);
     base_t cy = 0;
-    for (size_t i = 0; i < small->block_num; ++i) {
+    for (size_t i = 0; i < b->block_num; ++i) {
         cy = base_add(&c->block[i], a->block[i], b->block[i], cy);
     }
-    for (size_t i = small->block_num; i < big->block_num; ++i) {
-        cy = base_add(&c->block[i], big->block[i], 0, cy);
+    for (size_t i = b->block_num; i < a->block_num; ++i) {
+        cy = base_add(&c->block[i], a->block[i], 0, cy);
     }
     if (cy) {
-        big_num_resize(c, big->block_num + 1);
+        big_num_resize(c, a->block_num + 1);
         c->block[c->block_num - 1] = cy;
     }
     big_num_trim(c);
@@ -42,6 +43,10 @@ void big_num_sub(big_num_t *c, big_num_t *a, big_num_t *b)
         return;
     big_num_resize(b, a->block_num);
     big_num_resize(c, a->block_num);
+    if (a->block_num == 1) {
+        c->block[0] = a->block[0] - b->block[0];
+        return;
+    }
     base_t cy = 1;
     for (size_t i = 0; i < a->block_num; ++i) {
         cy = base_add(&c->block[i], a->block[i], ~b->block[i], cy);
@@ -52,9 +57,9 @@ void big_num_lshift(big_num_t *a, int k)
 {
     base_t cy = 0;
     for (size_t i = 0; i < a->block_num; ++i) {
-        dbase_t t = ((dbase_t) a->block[i] << k) + cy;
-        cy = (base_t)(t >> BASE_BITS);
-        a->block[i] = (base_t) t;
+        base_t t = a->block[i];
+        a->block[i] = (t << k) | cy;
+        cy = t >> (BASE_BITS - k);
     }
     if (cy) {
         big_num_resize(a, a->block_num + 1);
@@ -63,9 +68,9 @@ void big_num_lshift(big_num_t *a, int k)
 }
 base_t base_mul(base_t *c, base_t a, base_t b, base_t cy)
 {
-    dbase_t t = (dbase_t) a * (dbase_t) b + (dbase_t) cy;
-    *c = (base_t) t;
-    cy = (base_t)(t >> BASE_BITS);
+    base_t hi;
+    __asm__("mulq %3" : "=a"(*c), "=d"(hi) : "%0"(a), "rm"(b));
+    cy = ((*c += cy) < cy) + hi;
     return cy;
 }
 void big_num_mul(big_num_t *c, big_num_t *a, big_num_t *b)
@@ -78,6 +83,15 @@ void big_num_mul(big_num_t *c, big_num_t *a, big_num_t *b)
         big_num_trim(c);
         return;
     }
+    // short cut
+    if (a->block_num == 1 && b->block_num == 1) {
+        base_t cy = 0;
+        cy = base_mul(&c->block[0], a->block[0], b->block[0], cy);
+        c->block[1] = cy;
+        big_num_trim(c);
+        return;
+    }
+
     if (!c)
         return;
     for (size_t shift = 0; shift < b->block_num; ++shift) {
@@ -109,6 +123,16 @@ void big_num_square(big_num_t *c, big_num_t *a)
 
     if (!c)
         return;
+
+    // short cut
+    if (a->block_num == 1) {
+        base_t cy = 0;
+        cy = base_mul(&c->block[0], a->block[0], a->block[0], cy);
+        c->block[1] = cy;
+        big_num_trim(c);
+        return;
+    }
+
     for (size_t shift = 0; shift < a->block_num; ++shift) {
         base_t cy = 0;
         size_t i = shift + 1;
