@@ -11,6 +11,8 @@
 #define SAMPLE_TIME 21
 #define OFFSET 10000
 #define METHOD 3
+#define PRINT 0
+#define STAT_FILE_NAME "scripts/stat_med_fdouble_tmp.txt"
 int cmpfunc(const void *a, const void *b)
 {
     return (*(int *) a - *(int *) b);
@@ -31,7 +33,7 @@ int main()
     int **sample_kernel = malloc((OFFSET + 1) * sizeof(int *));
     int **sample_user = malloc((OFFSET + 1) * sizeof(int *));
     int **k2u = malloc((OFFSET + 1) * sizeof(int *));
-    FILE *fpm = fopen("scripts/stat_med_fdouble_v6.txt", "w");
+    FILE *fpm = fopen(STAT_FILE_NAME, "w");
     struct timespec t1, t2;
     int fd = open(FIB_DEV, O_RDWR);
     if (fd < 0) {
@@ -58,12 +60,14 @@ int main()
         }
     }
     for (int i = 0; i <= OFFSET; i++) {
-        lseek(fd, i, SEEK_SET);
-        long long sz3 = read(fd, big_num_buf, METHOD);
-        printf("f_big_num(%d): %s\n", i, big_num_buf);
-        printf("f_big_num(%d): %ld\n", i, strnlen(big_num_buf, 10000));
-        if (sz3)
-            printf("f_big_num(%d) is truncated\n", i);
+        if (PRINT) {
+            lseek(fd, i, SEEK_SET);
+            long long sz3 = read(fd, big_num_buf, METHOD);
+            printf("f_big_num(%d): %s\n", i, big_num_buf);
+            printf("f_big_num(%d): %ld\n", i, strnlen(big_num_buf, 10000));
+            if (sz3)
+                printf("f_big_num(%d) is truncated\n", i);
+        }
         qsort(sample_kernel[i], SAMPLE_TIME, sizeof(int), cmpfunc);
         qsort(sample_user[i], SAMPLE_TIME, sizeof(int), cmpfunc);
         qsort(k2u[i], SAMPLE_TIME, sizeof(int), cmpfunc);
