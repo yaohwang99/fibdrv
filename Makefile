@@ -10,7 +10,7 @@ PWD := $(shell pwd)
 
 GIT_HOOKS := .git/hooks/applied
 
-all: $(GIT_HOOKS) client client_stat
+all: $(GIT_HOOKS) client client_stat client_perf
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
 $(GIT_HOOKS):
@@ -28,6 +28,9 @@ unload:
 client: client.c
 	$(CC) -o $@ $^
 client_stat: client_stat.c
+	$(CC) -o $@ $^
+
+client_perf: client_perf.c
 	$(CC) -o $@ $^
 PRINTF = env printf
 PASS_COLOR = \e[32;01m
